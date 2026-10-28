@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GharMap — Phase 0 web app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0F6E66}a:hover{color:#0B524C}
+button{font:inherit;color:inherit;background:none;border:0;margin:0;padding:0;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:0.45}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #F59E0B;outline-offset:2px}
+input,textarea{font:inherit;color:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; background: #F4F5F7; color: #16202B; font-family: 'Manrope', system-ui, sans-serif">
+
+<sc-if value="{{ isMap }}" hint-placeholder-val="{{ true }}">
+<header style="flex: none; padding: 20px 16px 14px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: {{ accent }}">GharMap</span>
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 800; letter-spacing: -0.01em">Gurgaon Flat</h1>
+<span style="font-size: 13px; color: #586272">Sector 37D · {{ totalItems }} items in {{ roomCount }} rooms</span>
+</div>
+<button type="button" onClick="{{ goSearch }}" style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; background: #FFFFFF; border: 1px solid #D5DAE1; border-radius: 14px; color: #586272; font-size: 15px; text-align: left; box-shadow: 0 1px 2px rgba(16,24,40,0.05)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span>Find anything in your home…</span>
+</button>
+</header>
+</sc-if>
+
+<sc-if value="{{ isSpace }}" hint-placeholder-val="{{ false }}">
+<header style="flex: none; padding: 8px 16px 14px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 4px; min-height: 44px">
+<button type="button" aria-label="Back" onClick="{{ spaceBack }}" style="width: 44px; height: 44px; margin-left: -12px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 12px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</button>
+<nav aria-label="Breadcrumb" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px; font-size: 13px; min-width: 0">
+<sc-for list="{{ crumbs }}" as="c" hint-placeholder-count="2">
+<sc-if value="{{ c.notFirst }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="color: #8A93A0; padding: 0 2px">›</span></sc-if>
+<button type="button" onClick="{{ c.go }}" style="padding: 8px 2px; font-weight: 700; color: {{ accent }}">{{ c.name }}</button>
+</sc-for>
+</nav>
+</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<span aria-hidden="true" style="width: 14px; height: 14px; border-radius: 4px; flex: none; background: {{ spaceColor }}"></span>
+<h1 style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 800">{{ spaceName }}</h1>
+</div>
+<span style="font-size: 13px; color: #586272">{{ spaceCount }} items inside</span>
+</header>
+</sc-if>
+
+<sc-if value="{{ isItem }}" hint-placeholder-val="{{ false }}">
+<header style="flex: none; padding: 8px 16px 14px; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 4px; min-height: 44px">
+<button type="button" aria-label="Back" onClick="{{ itemBack }}" style="width: 44px; height: 44px; margin-left: -12px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 12px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</button>
+<nav aria-label="Breadcrumb" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px; font-size: 13px; min-width: 0">
+<sc-for list="{{ itemCrumbs }}" as="c" hint-placeholder-count="3">
+<sc-if value="{{ c.notFirst }}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="color: #8A93A0; padding: 0 2px">›</span></sc-if>
+<button type="button" onClick="{{ c.go }}" style="padding: 8px 2px; font-weight: 700; color: {{ accent }}">{{ c.name }}</button>
+</sc-for>
+</nav>
+</div>
+<h1 style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 800">{{ itemName }}</h1>
+</header>
+</sc-if>
+
+<sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+<header style="flex: none; padding: 20px 16px 14px; display: flex; flex-direction: column; gap: 12px">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 800">Search</h1>
+<div style="display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 6px 0 14px; background: #FFFFFF; border: 2px solid {{ accent }}; border-radius: 14px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#586272" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">Search items</label>
+<input id="q" type="search" autoComplete="off" value="{{ query }}" onChange="{{ onQuery }}" autoFocus="{{ true }}" placeholder="Try passport, charger, medicines" style="flex: 1; min-width: 0; height: 44px; border: 0; outline: none; background: transparent; font-size: 16px">
+<sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+<button type="button" aria-label="Clear search" onClick="{{ clearQuery }}" style="width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: #586272">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</sc-if>
+</div>
+</header>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<header style="flex: none; padding: 20px 16px 14px; display: flex; flex-direction: column; gap: 2px">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 800">Settings</h1>
+<span style="font-size: 13px; color: #586272">Phase 0 prototype · everything stays in this browser</span>
+</header>
+</sc-if>
+
+<main style="flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 24px">
+
+<sc-if value="{{ isMap }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<sc-if value="{{ hasHl }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FEF3C7; border: 1px solid #F0C24F; border-radius: 16px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<span style="font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #92400E">Found</span>
+<span style="font-size: 17px; font-weight: 800; color: #1F1300">{{ hlName }}</span>
+<span style="font-size: 13px; line-height: 18px; color: #5C3A06">{{ hlPath }}</span>
+</div>
+<button type="button" aria-label="Clear highlight" onClick="{{ clearHl }}" style="width: 44px; height: 44px; margin: -10px -10px 0 0; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 12px; color: #5C3A06">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{ openHlSpace }}" style="flex: 1; height: 44px; border-radius: 12px; background: #1F1300; color: #FFF7E0; font-weight: 700; font-size: 14px">Open that shelf</button>
+<button type="button" onClick="{{ openHlItem }}" style="flex: 1; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E2BC5A; color: #1F1300; font-weight: 700; font-size: 14px">Item details</button>
+</div>
+</div>
+</sc-if>
+
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{ colA }}" as="room" hint-placeholder-count="3">
+<section aria-label="{{ room.name }}" style="display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 16px; {{ room.cardStyle }}">
+<button type="button" onClick="{{ room.open }}" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 36px; text-align: left">
+<span style="display: flex; align-items: center; gap: 6px; min-width: 0">
+<span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; flex: none; background: {{ room.color }}"></span>
+<span style="font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ room.name }}</span>
+</span>
+<span style="font-size: 12px; font-weight: 700; color: #3F4855">{{ room.count }}</span>
+</button>
+<sc-for list="{{ room.units }}" as="unit" hint-placeholder-count="2">
+<button type="button" onClick="{{ unit.open }}" style="display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 10px; text-align: left; {{ unit.style }}">
+<span style="display: flex; justify-content: space-between; gap: 4px; font-size: 12px; font-weight: 800">
+<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ unit.name }}</span>
+<span style="font-weight: 700; color: #586272">{{ unit.count }}</span>
+</span>
+<sc-for list="{{ unit.comps }}" as="comp" hint-placeholder-count="2">
+<span style="display: block; padding: 3px 6px; border-radius: 6px; font-size: 11px; line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; {{ comp.style }}">{{ comp.label }}</span>
+</sc-for>
+</button>
+</sc-for>
+</section>
+</sc-for>
+</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{ colB }}" as="room" hint-placeholder-count="3">
+<section aria-label="{{ room.name }}" style="display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 16px; {{ room.cardStyle }}">
+<button type="button" onClick="{{ room.open }}" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 36px; text-align: left">
+<span style="display: flex; align-items: center; gap: 6px; min-width: 0">
+<span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; flex: none; background: {{ room.color }}"></span>
+<span style="font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ room.name }}</span>
+</span>
+<span style="font-size: 12px; font-weight: 700; color: #3F4855">{{ room.count }}</span>
+</button>
+<sc-for list="{{ room.units }}" as="unit" hint-placeholder-count="2">
+<button type="button" onClick="{{ unit.open }}" style="display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 10px; text-align: left; {{ unit.style }}">
+<span style="display: flex; justify-content: space-between; gap: 4px; font-size: 12px; font-weight: 800">
+<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ unit.name }}</span>
+<span style="font-weight: 700; color: #586272">{{ unit.count }}</span>
+</span>
+<sc-for list="{{ unit.comps }}" as="comp" hint-placeholder-count="2">
+<span style="display: block; padding: 3px 6px; border-radius: 6px; font-size: 11px; line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; {{ comp.style }}">{{ comp.label }}</span>
+</sc-for>
+</button>
+</sc-for>
+</section>
+</sc-for>
+</div>
+</div>
+<p style="margin: 4px 0 0; text-align: center; font-size: 12px; color: #586272">Tap a room or a cupboard to zoom in</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSpace }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+<sc-if value="{{ hasChildren }}" hint-placeholder-val="{{ true }}">
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #586272">Inside</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{ children }}" as="k" hint-placeholder-count="2">
+<button type="button" onClick="{{ k.open }}" style="display: flex; flex-direction: column; gap: 6px; min-height: 96px; padding: 12px; border-radius: 14px; text-align: left; {{ k.style }}">
+<span style="display: flex; justify-content: space-between; align-items: baseline; gap: 6px">
+<span style="font-size: 15px; font-weight: 800">{{ k.name }}</span>
+<span style="font-size: 12px; font-weight: 700; color: #586272">{{ k.count }}</span>
+</span>
+<span style="font-size: 12px; line-height: 16px; color: #586272">{{ k.sub }}</span>
+<sc-if value="{{ k.hasFound }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 800; color: #92400E">{{ k.found }}</span></sc-if>
+</button>
+</sc-for>
+</div>
+</section>
+</sc-if>
+<sc-if value="{{ hasHere }}" hint-placeholder-val="{{ false }}">
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #586272">Items here</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{ here }}" as="i" hint-placeholder-count="3">
+<li>
+<button type="button" onClick="{{ i.open }}" style="width: 100%; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px 0 14px; border-radius: 12px; text-align: left; {{ i.style }}">
+<span style="flex: 1; font-size: 15px; font-weight: 600">{{ i.name }}</span>
+<span style="font-size: 13px; color: #586272">{{ i.qty }}</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A93A0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</li>
+</sc-for>
+</ul>
+</section>
+</sc-if>
+<sc-if value="{{ isEmptySpace }}" hint-placeholder-val="{{ false }}">
+<div style="padding: 24px 16px; text-align: center; border: 1px dashed #C9CFD8; border-radius: 14px; color: #586272; font-size: 14px">Nothing here yet. Add the first item.</div>
+</sc-if>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{ addHere }}" style="flex: 1; height: 48px; border-radius: 12px; background: {{ accent }}; color: #FFFFFF; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+<span>Add item here</span>
+</button>
+<button type="button" onClick="{{ openSpaceForm }}" style="height: 48px; padding: 0 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #D5DAE1; font-weight: 700; font-size: 14px">Add section</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isItem }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<section style="display: flex; flex-direction: column; gap: 12px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #586272">Location</span>
+<span style="font-size: 15px; line-height: 21px; font-weight: 600">{{ itemPath }}</span>
+</div>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{ showOnMap }}" style="flex: 1; height: 44px; border-radius: 12px; background: {{ accent }}; color: #FFFFFF; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"></path><circle cx="12" cy="10" r="2"></circle></svg>
+<span>Show on map</span>
+</button>
+<button type="button" onClick="{{ openMove }}" style="flex: 1; height: 44px; border-radius: 12px; background: #FFFFFF; border: 1px solid #D5DAE1; font-weight: 700; font-size: 14px">Move</button>
+</div>
+</section>
+<section style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 16px">
+<span id="item-qty-label" style="font-size: 15px; font-weight: 700">Quantity</span>
+<div role="group" aria-labelledby="item-qty-label" style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Decrease quantity" onClick="{{ decQty }}" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #D5DAE1; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg>
+</button>
+<span style="min-width: 64px; text-align: center; font-size: 17px; font-weight: 800">{{ itemQty }} <span style="font-size: 12px; font-weight: 600; color: #586272">{{ itemUnit }}</span></span>
+<button type="button" aria-label="Increase quantity" onClick="{{ incQty }}" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #D5DAE1; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+</section>
+<section style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 16px">
+<label for="item-notes" style="font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #586272">Notes</label>
+<textarea id="item-notes" rows="3" value="{{ itemNotes }}" onChange="{{ onNotes }}" placeholder="Anything that helps you find it" style="resize: none; padding: 10px 12px; border: 1px solid #D5DAE1; border-radius: 12px; background: #FAFBFC; font-size: 15px; line-height: 21px"></textarea>
+</section>
+<section style="display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 16px">
+<h2 style="margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #586272">History</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{ itemHistory }}" as="h" hint-placeholder-count="1">
+<li style="display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 18px; color: #3F4855">
+<span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 3px; flex: none; background: #8A93A0"></span>
+<span>{{ h.text }}</span>
+</li>
+</sc-for>
+</ul>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<sc-if value="{{ isEmptyQuery }}" hint-placeholder-val="{{ true }}">
+<section style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #586272">Often searched</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{ frequent }}" as="f" hint-placeholder-count="5">
+<button type="button" onClick="{{ f.pick }}" style="height: 40px; padding: 0 14px; border-radius: 999px; background: #FFFFFF; border: 1px solid #D5DAE1; font-size: 14px; font-weight: 600">{{ f.label }}</button>
+</sc-for>
+</div>
+<p style="margin: 4px 0 0; font-size: 13px; line-height: 19px; color: #586272">Search looks at item names and notes. Tap a result and the map lights up the exact shelf.</p>
+</section>
+</sc-if>
+<sc-if value="{{ hasResults }}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 13px; font-weight: 700; color: #586272">{{ resultCount }} {{ resultWord }}</span>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{ results }}" as="r" hint-placeholder-count="3">
+<li>
+<button type="button" onClick="{{ r.show }}" style="width: 100%; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 14px; text-align: left">
+<span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; flex: none; background: {{ r.color }}"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; font-weight: 700">{{ r.name }}</span>
+<span style="font-size: 12px; line-height: 16px; color: #586272">{{ r.path }}</span>
+</span>
+<span style="display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; color: {{ accent }}">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"></path><circle cx="12" cy="10" r="2"></circle></svg>
+<span>Map</span>
+</span>
+</button>
+</li>
+</sc-for>
+</ul>
+</sc-if>
+<sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 16px; text-align: center; background: #FFFFFF; border: 1px dashed #C9CFD8; border-radius: 16px">
+<span style="font-size: 15px; font-weight: 700">Nothing called “{{ query }}” yet</span>
+<button type="button" onClick="{{ addFromQuery }}" style="height: 44px; padding: 0 16px; border-radius: 12px; background: {{ accent }}; color: #FFFFFF; font-weight: 700; font-size: 14px">Add “{{ query }}”</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<section style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 16px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 800">Entry speed</h2>
+<span style="padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; {{ speedPillStyle }}">{{ speedStatus }}</span>
+</div>
+<div style="display: flex; align-items: baseline; gap: 8px">
+<span style="font-size: 36px; line-height: 40px; font-weight: 800; letter-spacing: -0.02em">{{ medianText }}</span>
+<span style="font-size: 13px; color: #586272">median per item · target under 10 s</span>
+</div>
+<div role="img" aria-label="{{ barsLabel }}" style="position: relative; height: 72px; display: flex; align-items: flex-end; gap: 6px; border-bottom: 1px solid #C9CFD8">
+<span aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 36px; border-top: 1px dashed #8A93A0"></span>
+<sc-for list="{{ bars }}" as="b" hint-placeholder-count="8">
+<span style="flex: 1; border-radius: 4px 4px 0 0; {{ b.style }}"></span>
+</sc-for>
+</div>
+<span style="font-size: 12px; line-height: 17px; color: #586272">Last {{ barCount }} items added, oldest first. Dashed line is 10 s; amber bars took longer.</span>
+</section>
+<section style="display: flex; flex-direction: column; gap: 10px; padding: 16px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 16px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 800">Your data</h2>
+<p style="margin: 0; font-size: 13px; line-height: 19px; color: #586272">{{ totalItems }} items in {{ spaceTotal }} places. Stored only in this browser; nothing is sent anywhere.</p>
+<button type="button" onClick="{{ exportData }}" style="height: 46px; border-radius: 12px; background: {{ accent }}; color: #FFFFFF; font-weight: 700; font-size: 14px">Export backup (JSON)</button>
+<button type="button" onClick="{{ importData }}" style="height: 46px; border-radius: 12px; background: #FFFFFF; border: 1px solid #D5DAE1; font-weight: 700; font-size: 14px">Import backup</button>
+<button type="button" onClick="{{ resetData }}" style="height: 46px; border-radius: 12px; background: #FFFFFF; border: 1px solid #F1B5AE; color: #B42318; font-weight: 700; font-size: 14px">Reset to demo data</button>
+</section>
+<section style="display: flex; flex-direction: column; gap: 6px; padding: 16px; background: #FFFFFF; border: 1px solid #E3E6EA; border-radius: 16px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 800">About this build</h2>
+<p style="margin: 0; font-size: 13px; line-height: 19px; color: #586272">GharMap Phase 0 web prototype. One home, no login, no sync. Gold, pantry, documents and AI come in later phases.</p>
+</section>
+</div>
+</sc-if>
+
+</main>
+
+<nav aria-label="Main" style="flex: none; height: 76px; display: flex; align-items: center; justify-content: space-around; padding: 0 8px 4px; background: #FFFFFF; border-top: 1px solid #E3E6EA">
+<button type="button" onClick="{{ navMap }}" aria-current="{{ mapCurrent }}" style="min-width: 64px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 700; color: {{ mapNavColor }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="10" rx="2"></rect><rect x="13" y="3" width="8" height="6" rx="2"></rect><rect x="13" y="11" width="8" height="10" rx="2"></rect><rect x="3" y="15" width="8" height="6" rx="2"></rect></svg>
+<span>Map</span>
+</button>
+<button type="button" onClick="{{ navSearch }}" aria-current="{{ searchCurrent }}" style="min-width: 64px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 700; color: {{ searchNavColor }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<span>Search</span>
+</button>
+<button type="button" onClick="{{ navAdd }}" style="min-width: 64px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 700; color: #16202B">
+<span style="width: 44px; height: 40px; border-radius: 14px; background: {{ accent }}; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(16,24,40,0.18)">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</span>
+<span>Add</span>
+</button>
+<button type="button" onClick="{{ navSettings }}" aria-current="{{ settingsCurrent }}" style="min-width: 64px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 700; color: {{ settingsNavColor }}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+<span>Settings</span>
+</button>
+</nav>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 90px; z-index: 4; padding: 12px 14px; background: #16202B; color: #FFFFFF; border-radius: 12px; font-size: 14px; font-weight: 700; box-shadow: 0 8px 20px rgba(16,24,40,0.25)">{{ toast }}</div>
+</sc-if>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; justify-content: flex-end">
+<button type="button" aria-label="Close" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(16,24,40,0.45)"></button>
+<div role="dialog" aria-modal="true" aria-label="{{ sheetTitle }}" style="position: relative; max-height: 86%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 10px 16px 22px; background: #FFFFFF; border-radius: 22px 22px 0 0; box-shadow: 0 -8px 24px rgba(16,24,40,0.12)">
+<span aria-hidden="true" style="align-self: center; width: 40px; height: 4px; border-radius: 2px; background: #D5DAE1"></span>
+
+<sc-if value="{{ showAdd }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<h2 style="margin: 0; font-size: 20px; font-weight: 800">Add item</h2>
+<span aria-label="{{ timerLabel }}" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; {{ timerStyle }}">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l3 2"></path></svg>
+<span>{{ elapsedText }}</span>
+</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="add-name" style="font-size: 13px; font-weight: 700">What is it?</label>
+<input id="add-name" type="text" autoComplete="off" value="{{ addName }}" onChange="{{ onAddName }}" onKeyDown="{{ onAddKey }}" autoFocus="{{ true }}" placeholder="e.g. Passport, spare keys" style="height: 50px; padding: 0 14px; border: 2px solid #D5DAE1; border-radius: 12px; background: #FAFBFC; font-size: 17px">
+<sc-if value="{{ hasSuggestions }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{ suggestions }}" as="g" hint-placeholder-count="3">
+<button type="button" onClick="{{ g.pick }}" style="height: 36px; padding: 0 12px; border-radius: 999px; background: #EEF0F3; font-size: 13px; font-weight: 700">{{ g.label }}</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="where-label" style="font-size: 13px; font-weight: 700">Where is it?</span>
+<button type="button" aria-describedby="where-label" onClick="{{ openPickerAdd }}" style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 14px; background: #FFFFFF; border: 1px solid #D5DAE1; border-radius: 12px; text-align: left">
+<span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; flex: none; background: {{ addRoomColor }}"></span>
+<span style="flex: 1; font-size: 14px; line-height: 19px; font-weight: 600">{{ addPath }}</span>
+<span style="font-size: 13px; font-weight: 800; color: {{ accent }}">Change</span>
+</button>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<span id="add-qty-label" style="font-size: 13px; font-weight: 700">Quantity</span>
+<div role="group" aria-labelledby="add-qty-label" style="display: flex; align-items: center; gap: 4px">
+<button type="button" aria-label="Decrease quantity" onClick="{{ decAdd }}" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #D5DAE1; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg>
+</button>
+<span style="min-width: 40px; text-align: center; font-size: 17px; font-weight: 800">{{ addQty }}</span>
+<button type="button" aria-label="Increase quantity" onClick="{{ incAdd }}" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #D5DAE1; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+</div>
+</div>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{ saveOnce }}" disabled="{{ cannotSave }}" style="height: 52px; padding: 0 18px; border-radius: 12px; border: 1px solid #D5DAE1; font-weight: 800; font-size: 15px">Save</button>
+<button type="button" onClick="{{ saveMore }}" disabled="{{ cannotSave }}" style="flex: 1; height: 52px; border-radius: 12px; background: {{ accent }}; color: #FFFFFF; font-weight: 800; font-size: 15px">Save and add next</button>
+</div>
+<span style="font-size: 12px; line-height: 17px; color: #586272; text-align: center">Press Enter to save and start the next item. Each save is timed for Gate 0.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ showSpaceForm }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 style="margin: 0; font-size: 20px; font-weight: 800">Add a section</h2>
+<span style="font-size: 13px; color: #586272">Inside {{ spaceName }}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="new-space" style="font-size: 13px; font-weight: 700">Name</label>
+<input id="new-space" type="text" autoComplete="off" value="{{ newSpace }}" onChange="{{ onNewSpace }}" onKeyDown="{{ onNewSpaceKey }}" autoFocus="{{ true }}" placeholder="e.g. Top Shelf, Locker, Blue Box" style="height: 50px; padding: 0 14px; border: 2px solid #D5DAE1; border-radius: 12px; background: #FAFBFC; font-size: 17px">
+</div>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{ closeSheet }}" style="height: 52px; padding: 0 18px; border-radius: 12px; border: 1px solid #D5DAE1; font-weight: 800; font-size: 15px">Cancel</button>
+<button type="button" onClick="{{ saveSpace }}" disabled="{{ cannotSaveSpace }}" style="flex: 1; height: 52px; border-radius: 12px; background: {{ accent }}; color: #FFFFFF; font-weight: 800; font-size: 15px">Add section</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showPicker }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<h2 style="margin: 0; font-size: 20px; font-weight: 800">{{ pickerTitle }}</h2>
+<button type="button" aria-label="Close place picker" onClick="{{ closePicker }}" style="width: 44px; height: 44px; margin-right: -10px; display: flex; align-items: center; justify-content: center; border-radius: 12px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<sc-for list="{{ pickerGroups }}" as="grp" hint-placeholder-count="3">
+<section style="display: flex; flex-direction: column; gap: 6px">
+<h3 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800">
+<span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 3px; flex: none; background: {{ grp.color }}"></span>
+<span>{{ grp.name }}</span>
+</h3>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{ grp.options }}" as="o" hint-placeholder-count="3">
+<button type="button" onClick="{{ o.pick }}" aria-pressed="{{ o.selected }}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px; padding: 0 12px; border-radius: 12px; text-align: left; font-size: 14px; font-weight: 600; {{ o.style }}">
+<span>{{ o.label }}</span>
+<sc-if value="{{ o.selected }}" hint-placeholder-val="{{ false }}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+</sc-if>
+</button>
+</sc-for>
+</div>
+</section>
+</sc-for>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0F6E66","options":["#0F6E66","#3949AB","#9A3412"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = this.fresh();
+  }
+
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      if (this.state.sheet === 'add') this.setState({ tick: Date.now() });
+    }, 200);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timer);
+    clearTimeout(this.toastTimer);
+  }
+
+  toast(msg) {
+    clearTimeout(this.toastTimer);
+    this.setState({ toast: msg });
+    this.toastTimer = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+
+  fresh() {
+    return {
+      screen: 'map', spaceId: null, itemId: null, query: '', hl: null,
+      sheet: null, picker: null,
+      addName: '', addQty: 1, addSpace: 'wa-right', addStart: 0, tick: 0, newSpace: '',
+      times: [7.4, 12.1, 6.0, 9.2, 5.1, 8.3, 4.6, 6.8, 11.0, 5.7],
+      items: this.seedItems(), extra: [], toast: ''
+    };
+  }
+
+  baseSpaces() {
+    return [
+      { id: 'home', parent: null, name: 'Gurgaon Flat' },
+      { id: 'kitchen', parent: 'home', name: 'Kitchen', color: '#FF6B35' },
+      { id: 'fridge', parent: 'kitchen', name: 'Fridge' },
+      { id: 'fridge-top', parent: 'fridge', name: 'Top Shelf' },
+      { id: 'fridge-mid', parent: 'fridge', name: 'Middle Shelf' },
+      { id: 'fridge-veg', parent: 'fridge', name: 'Veg Tray' },
+      { id: 'dry-cabinet', parent: 'kitchen', name: 'Dry Cabinet' },
+      { id: 'dc-top', parent: 'dry-cabinet', name: 'Top Shelf' },
+      { id: 'dc-bot', parent: 'dry-cabinet', name: 'Bottom Shelf' },
+      { id: 'spice-rack', parent: 'kitchen', name: 'Spice Rack' },
+      { id: 'sr-1', parent: 'spice-rack', name: 'All Spices' },
+      { id: 'drawing', parent: 'home', name: 'Drawing Room', color: '#4ECDC4' },
+      { id: 'glass-almirah', parent: 'drawing', name: 'Glass Almirah' },
+      { id: 'ga-top', parent: 'glass-almirah', name: 'Top Shelf' },
+      { id: 'ga-mid', parent: 'glass-almirah', name: 'Middle Shelf' },
+      { id: 'ga-bot', parent: 'glass-almirah', name: 'Bottom Shelf' },
+      { id: 'tv-unit', parent: 'drawing', name: 'TV Unit' },
+      { id: 'tv-top', parent: 'tv-unit', name: 'Top Surface' },
+      { id: 'tv-draw', parent: 'tv-unit', name: 'Drawer' },
+      { id: 'master', parent: 'home', name: 'Master Bedroom', color: '#A78BFA' },
+      { id: 'wood-almirah', parent: 'master', name: 'Wooden Almirah' },
+      { id: 'wa-top', parent: 'wood-almirah', name: 'Top Section' },
+      { id: 'wa-left', parent: 'wood-almirah', name: 'Left Side' },
+      { id: 'wa-right', parent: 'wood-almirah', name: 'Right Side' },
+      { id: 'bed-drawer', parent: 'master', name: 'Bed Drawer' },
+      { id: 'bd-1', parent: 'bed-drawer', name: 'Left Drawer' },
+      { id: 'bd-2', parent: 'bed-drawer', name: 'Right Drawer' },
+      { id: 'kids', parent: 'home', name: 'Kids Room', color: '#FCD34D' },
+      { id: 'toy-shelf', parent: 'kids', name: 'Toy Shelf' },
+      { id: 'ts-1', parent: 'toy-shelf', name: "Aarav's Shelf" },
+      { id: 'ts-2', parent: 'toy-shelf', name: 'Younger One' },
+      { id: 'study-table', parent: 'kids', name: 'Study Table' },
+      { id: 'st-1', parent: 'study-table', name: 'Drawer' },
+      { id: 'store', parent: 'home', name: 'Store Room', color: '#60A5FA' },
+      { id: 'rack', parent: 'store', name: 'Storage Rack' },
+      { id: 'rk-top', parent: 'rack', name: 'Top Shelf' },
+      { id: 'rk-bot', parent: 'rack', name: 'Bottom Shelf' },
+      { id: 'bath', parent: 'home', name: 'Bathrooms', color: '#94A3B8' },
+      { id: 'cabinet', parent: 'bath', name: 'Cabinet' },
+      { id: 'cb-1', parent: 'cabinet', name: 'Shelf' }
+    ];
+  }
+
+  seedItems() {
+    const rows = [
+      ['fridge-top', 'Milk', 2, 'L'], ['fridge-top', 'Curd', 1, ''], ['fridge-top', 'Butter', 1, ''], ['fridge-top', 'Cheese', 1, ''],
+      ['fridge-mid', 'Apples', 6, ''], ['fridge-mid', 'Oranges', 4, ''], ['fridge-mid', 'Leftovers', 1, ''],
+      ['fridge-veg', 'Tomatoes', 1, 'kg'], ['fridge-veg', 'Onions', 2, 'kg'], ['fridge-veg', 'Capsicum', 3, ''],
+      ['dc-top', 'Dal', 1, 'kg'], ['dc-top', 'Rice', 5, 'kg'], ['dc-top', 'Atta', 3, 'kg'], ['dc-top', 'Poha', 1, 'kg'],
+      ['dc-bot', 'Cooking Oil', 1, 'L'], ['dc-bot', 'Vinegar', 1, ''], ['dc-bot', 'Sauces', 3, ''],
+      ['sr-1', 'Haldi', 1, ''], ['sr-1', 'Jeera', 1, ''], ['sr-1', 'Dhaniya', 1, ''], ['sr-1', 'Garam Masala', 1, ''],
+      ['ga-top', 'Bone China Dinner Set', 1, 'set'], ['ga-top', 'Crystal Glasses', 6, ''],
+      ['ga-mid', 'Photo Frames', 4, ''], ['ga-mid', 'Showpieces', 5, ''], ['ga-mid', 'Vases', 2, ''],
+      ['ga-bot', 'Books', 20, ''], ['ga-bot', 'Magazines', 8, ''], ['ga-bot', 'Board Games', 3, ''],
+      ['tv-top', 'Smart TV 55 inch', 1, ''], ['tv-top', 'Soundbar', 1, ''],
+      ['tv-draw', 'Remote Controls', 3, ''], ['tv-draw', 'HDMI Cables', 2, ''], ['tv-draw', 'Spare Batteries', 8, ''],
+      ['wa-top', 'Winter Razai', 2, ''], ['wa-top', 'Extra Pillows', 4, ''], ['wa-top', 'Blankets', 3, ''],
+      ['wa-left', 'Medicines', 1, 'box'], ['wa-left', 'First Aid Kit', 1, ''], ['wa-left', 'Thermometer', 1, ''],
+      ['wa-right', 'Jewellery Box', 1, ''], ['wa-right', 'Documents Folder', 1, ''], ['wa-right', 'Passports', 2, ''],
+      ['bd-1', 'Chargers', 3, ''], ['bd-1', 'Watch', 1, ''], ['bd-1', 'Wallet', 1, ''],
+      ['bd-2', 'Novels', 4, ''], ['bd-2', 'Pen', 2, ''], ['bd-2', 'Notepad', 1, ''],
+      ['ts-1', 'Lego Sets', 3, ''], ['ts-1', 'Cricket Bat', 1, ''], ['ts-1', 'Drawing Book', 2, ''],
+      ['ts-2', 'Soft Toys', 6, ''], ['ts-2', 'Blocks', 1, 'box'], ['ts-2', 'Puzzles', 4, ''],
+      ['st-1', 'Stationery', 1, 'box'], ['st-1', 'School Books', 10, ''], ['st-1', 'Crayons', 2, 'box'],
+      ['rk-top', 'Suitcases', 3, ''], ['rk-top', 'Diwali Lights', 4, ''],
+      ['rk-bot', 'Tool Box', 1, ''], ['rk-bot', 'Extension Board', 2, ''],
+      ['cb-1', 'Dettol Soap', 3, ''], ['cb-1', 'Shampoo', 2, ''], ['cb-1', 'Toothpaste', 2, '']
+    ];
+    const notes = {
+      'Passports': 'Both family passports, in the blue folder.',
+      'Bone China Dinner Set': 'Wedding gift. Handle with care.',
+      'Documents Folder': 'Flat registry, car RC, insurance papers.'
+    };
+    return rows.map((r, n) => ({
+      id: 'i' + n, space: r[0], name: r[1], qty: r[2], unit: r[3],
+      notes: notes[r[1]] || '', history: ['Added from the prototype data']
+    }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const accent = this.props.accent ?? '#0F6E66';
+    const spaces = this.baseSpaces().concat(s.extra);
+    const byId = {};
+    spaces.forEach(x => { byId[x.id] = x; });
+    const kids = id => spaces.filter(x => x.parent === id);
+    const direct = id => s.items.filter(i => i.space === id);
+    const deep = id => direct(id).length + kids(id).reduce((n, k) => n + deep(k.id), 0);
+    const pathOf = id => {
+      const out = [];
+      let c = byId[id];
+      while (c && c.id !== 'home') { out.unshift(c); c = byId[c.parent]; }
+      return out;
+    };
+    const pathText = id => pathOf(id).map(x => x.name).join(' › ');
+    const roomColor = id => { const r = pathOf(id)[0]; return r && r.color ? r.color : accent; };
+    const leavesUnder = id => {
+      const k = kids(id);
+      return k.length ? k.reduce((a, c) => a.concat(leavesUnder(c.id)), []) : [byId[id]];
+    };
+    const qtyText = i => (i.qty === 1 && !i.unit) ? '' : (i.qty + (i.unit ? ' ' + i.unit : ''));
+    const set = o => () => this.setState(o);
+    const openSpace = id => () => this.setState({ screen: 'space', spaceId: id });
+    const openItem = id => () => this.setState({ screen: 'item', itemId: id });
+    const noop = () => {};
+
+    const hlItem = s.hl ? s.items.find(i => i.id === s.hl) : null;
+    const hl = {};
+    if (hlItem) pathOf(hlItem.space).forEach(x => { hl[x.id] = true; });
+    const HL_BORDER = '2px solid #B45309';
+
+    const roomVm = id => {
+      const r = byId[id];
+      return {
+        name: r.name, color: r.color, count: deep(id), open: openSpace(id),
+        cardStyle: 'background: ' + r.color + '24; border: ' + (hl[id] ? HL_BORDER : '1px solid ' + r.color + '73') + ';',
+        units: kids(id).map(u => ({
+          name: u.name, count: deep(u.id), open: openSpace(u.id),
+          style: hl[u.id] ? 'background: #FFF7E0; border: ' + HL_BORDER + ';' : 'background: rgba(255,255,255,0.8); border: 1px solid rgba(22,32,43,0.08);',
+          comps: kids(u.id).map(c => ({
+            label: hl[c.id] ? c.name + ' · ' + hlItem.name : c.name,
+            style: hl[c.id] ? 'background: #F59E0B; color: #1F1300; font-weight: 800;' : 'background: #EEF0F3; color: #3F4855;'
+          }))
+        }))
+      };
+    };
+
+    const updItem = (id, fn) => this.setState({ items: this.state.items.map(i => i.id === id ? fn(i) : i) });
+
+    // Space view
+    const cur = s.screen === 'space' ? byId[s.spaceId] : null;
+    let crumbs = [], children = [], here = [], spaceBack = set({ screen: 'map' });
+    if (cur) {
+      crumbs = [{ name: 'Gurgaon Flat', go: set({ screen: 'map' }) }]
+        .concat(pathOf(cur.id).slice(0, -1).map(x => ({ name: x.name, go: openSpace(x.id) })))
+        .map((c, n) => Object.assign(c, { notFirst: n > 0 }));
+      spaceBack = cur.parent === 'home' ? set({ screen: 'map' }) : openSpace(cur.parent);
+      children = kids(cur.id).map(k => {
+        const inner = kids(k.id);
+        const its = direct(k.id);
+        const sub = inner.length
+          ? inner.map(c => c.name).join(' · ')
+          : (its.length ? its.slice(0, 3).map(i => i.name).join(', ') + (its.length > 3 ? '…' : '') : 'Empty');
+        return {
+          name: k.name, count: deep(k.id), open: openSpace(k.id), sub: sub,
+          hasFound: !!hl[k.id], found: hl[k.id] ? 'Has ' + hlItem.name : '',
+          style: hl[k.id] ? 'background: #FFF7E0; border: ' + HL_BORDER + ';' : 'background: #FFFFFF; border: 1px solid #E3E6EA;'
+        };
+      });
+      here = direct(cur.id).map(i => ({
+        name: i.name, qty: qtyText(i), open: openItem(i.id),
+        style: s.hl === i.id ? 'background: #FEF3C7; border: ' + HL_BORDER + ';' : 'background: #FFFFFF; border: 1px solid #E3E6EA;'
+      }));
+    }
+
+    // Item view
+    const it = s.screen === 'item' ? s.items.find(i => i.id === s.itemId) : null;
+    const itemCrumbs = it
+      ? [{ name: 'Gurgaon Flat', go: set({ screen: 'map' }) }]
+          .concat(pathOf(it.space).map(x => ({ name: x.name, go: openSpace(x.id) })))
+          .map((c, n) => Object.assign(c, { notFirst: n > 0 }))
+      : [];
+
+    // Search
+    const q = s.query.trim().toLowerCase();
+    const starts = i => i.name.toLowerCase().startsWith(q) ? 1 : 0;
+    const results = q
+      ? s.items
+          .filter(i => i.name.toLowerCase().includes(q) || i.notes.toLowerCase().includes(q))
+          .sort((a, b) => starts(b) - starts(a))
+          .map(i => ({ name: i.name, path: pathText(i.space), color: roomColor(i.space), show: set({ hl: i.id, screen: 'map' }) }))
+      : [];
+
+    // Add sheet
+    const openAdd = name => () => {
+      const st = this.state;
+      let target = st.addSpace;
+      if (st.screen === 'space' && st.spaceId) target = st.spaceId;
+      if (st.screen === 'item' && st.itemId) {
+        const x = st.items.find(i => i.id === st.itemId);
+        if (x) target = x.space;
+      }
+      this.setState({
+        sheet: 'add', picker: null, addName: typeof name === 'string' ? name : '',
+        addQty: 1, addSpace: target, addStart: Date.now(), tick: Date.now()
+      });
+    };
+    const save = another => () => {
+      const st = this.state;
+      const name = st.addName.trim();
+      if (!name) return;
+      const secs = Math.round((Date.now() - st.addStart) / 100) / 10;
+      const item = {
+        id: 'n' + Date.now(), space: st.addSpace, name: name, qty: st.addQty, unit: '',
+        notes: '', history: ['Added in ' + secs + ' s']
+      };
+      const next = { items: st.items.concat([item]), times: st.times.concat([secs]) };
+      if (another) Object.assign(next, { addName: '', addQty: 1, addStart: Date.now(), tick: Date.now() });
+      else next.sheet = null;
+      this.setState(next);
+      this.toast('Added ' + name + ' · ' + secs + ' s');
+    };
+    const elapsed = s.sheet === 'add' ? Math.max(0, ((s.tick || Date.now()) - s.addStart) / 1000) : 0;
+    const aq = s.addName.trim().toLowerCase();
+    const pool = ['Passport', 'Phone charger', 'Spare keys', 'Torch', 'Umbrella', 'Scissors', 'Tape', 'Power bank', 'Earphones']
+      .concat(s.items.map(i => i.name));
+    const seen = {};
+    const suggestions = aq
+      ? pool.filter(n => {
+          const k = n.toLowerCase();
+          if (seen[k] || k === aq || !k.startsWith(aq)) return false;
+          seen[k] = true;
+          return true;
+        }).slice(0, 3).map(n => ({ label: n, pick: set({ addName: n }) }))
+      : [];
+
+    // Add section
+    const saveSpace = () => {
+      const st = this.state;
+      const n = st.newSpace.trim();
+      if (!n || !st.spaceId) return;
+      this.setState({ sheet: null, extra: st.extra.concat([{ id: 'x' + Date.now(), parent: st.spaceId, name: n }]) });
+      this.toast('Added section ' + n);
+    };
+
+    // Place picker
+    const pickTo = id => () => {
+      const st = this.state;
+      if (st.picker === 'move') {
+        const x = st.items.find(i => i.id === st.itemId);
+        if (x && x.space !== id) {
+          const fromText = pathText(x.space);
+          this.setState({
+            picker: null,
+            items: st.items.map(i => i.id === x.id
+              ? Object.assign({}, i, { space: id, history: ['Moved from ' + fromText].concat(i.history) })
+              : i)
+          });
+          this.toast('Moved to ' + pathText(id));
+        } else {
+          this.setState({ picker: null });
+        }
+      } else {
+        this.setState({ picker: null, addSpace: id });
+      }
+    };
+    const selectedId = s.picker === 'move' ? (it ? it.space : null) : s.addSpace;
+    const pickerGroups = kids('home').map(r => ({
+      name: r.name, color: r.color,
+      options: leavesUnder(r.id).map(l => ({
+        label: pathOf(l.id).slice(1).map(x => x.name).join(' › ') || l.name,
+        pick: pickTo(l.id),
+        selected: l.id === selectedId,
+        style: l.id === selectedId
+          ? 'background: #E6F2F1; border: 2px solid ' + accent + ';'
+          : 'background: #FFFFFF; border: 1px solid #E3E6EA;'
+      }))
+    }));
+
+    // Settings
+    const sorted = s.times.slice().sort((a, b) => a - b);
+    const len = sorted.length;
+    const median = len ? (len % 2 ? sorted[(len - 1) / 2] : (sorted[len / 2 - 1] + sorted[len / 2]) / 2) : 0;
+    const recent = s.times.slice(-14);
+    const bars = recent.map(t => ({
+      style: 'height: ' + Math.max(4, Math.round(Math.min(t, 20) / 20 * 72)) + 'px; background: ' + (t <= 10 ? accent : '#D97706') + ';'
+    }));
+    const ok = median <= 10;
+
+    const onMapTab = s.screen === 'map' || s.screen === 'space' || s.screen === 'item';
+    const navColor = on => on ? accent : '#586272';
+    const sheetOpen = !!s.sheet || !!s.picker;
+
+    return {
+      accent: accent,
+      isMap: s.screen === 'map', isSpace: !!cur, isItem: !!it,
+      isSearch: s.screen === 'search', isSettings: s.screen === 'settings',
+
+      totalItems: s.items.length, roomCount: kids('home').length, spaceTotal: spaces.length - 1,
+      goSearch: set({ screen: 'search' }),
+      colA: ['kitchen', 'kids', 'bath'].map(roomVm),
+      colB: ['drawing', 'master', 'store'].map(roomVm),
+      hasHl: !!hlItem,
+      hlName: hlItem ? hlItem.name : '',
+      hlPath: hlItem ? pathText(hlItem.space) : '',
+      clearHl: set({ hl: null }),
+      openHlSpace: hlItem ? openSpace(hlItem.space) : noop,
+      openHlItem: hlItem ? openItem(hlItem.id) : noop,
+
+      crumbs: crumbs, spaceBack: spaceBack,
+      spaceName: cur ? cur.name : '', spaceCount: cur ? deep(cur.id) : 0,
+      spaceColor: cur ? roomColor(cur.id) : accent,
+      children: children, hasChildren: children.length > 0,
+      here: here, hasHere: here.length > 0,
+      isEmptySpace: !!cur && children.length === 0 && here.length === 0,
+      addHere: openAdd(''),
+      openSpaceForm: set({ sheet: 'space', picker: null, newSpace: '' }),
+
+      itemCrumbs: itemCrumbs,
+      itemBack: it ? openSpace(it.space) : set({ screen: 'map' }),
+      itemName: it ? it.name : '',
+      itemPath: it ? pathText(it.space) : '',
+      itemQty: it ? it.qty : 0,
+      itemUnit: it ? (it.unit || 'pcs') : '',
+      itemNotes: it ? it.notes : '',
+      itemHistory: it ? it.history.map(h => ({ text: h })) : [],
+      incQty: it ? () => updItem(it.id, i => Object.assign({}, i, { qty: i.qty + 1 })) : noop,
+      decQty: it ? () => updItem(it.id, i => Object.assign({}, i, { qty: Math.max(0, i.qty - 1) })) : noop,
+      onNotes: it ? e => { const v = e.target.value; updItem(it.id, i => Object.assign({}, i, { notes: v })); } : noop,
+      showOnMap: it ? set({ hl: it.id, screen: 'map' }) : noop,
+      openMove: set({ picker: 'move' }),
+
+      query: s.query,
+      onQuery: e => this.setState({ query: e.target.value }),
+      clearQuery: set({ query: '' }),
+      hasQuery: s.query.length > 0,
+      isEmptyQuery: !q,
+      frequent: ['passport', 'charger', 'medicines', 'remote', 'thermometer'].map(w => ({ label: w, pick: set({ query: w }) })),
+      results: results,
+      hasResults: results.length > 0,
+      noResults: !!q && results.length === 0,
+      resultCount: results.length,
+      resultWord: results.length === 1 ? 'match' : 'matches',
+      addFromQuery: openAdd(s.query.trim()),
+
+      medianText: median.toFixed(1) + ' s',
+      speedStatus: ok ? 'On target' : 'Too slow',
+      speedPillStyle: ok ? 'background: #E6F2F1; color: #0B524C;' : 'background: #FEF3C7; color: #92400E;',
+      bars: bars, barCount: recent.length,
+      barsLabel: 'Seconds per item for the last ' + recent.length + ' items: ' + recent.join(', '),
+      exportData: () => this.toast('Downloaded gharmap-backup.json'),
+      importData: () => this.toast('Choose a backup file to restore'),
+      resetData: () => { this.setState(this.fresh()); this.toast('Demo data restored'); },
+
+      navMap: set({ screen: 'map' }),
+      navSearch: set({ screen: 'search' }),
+      navSettings: set({ screen: 'settings' }),
+      navAdd: openAdd(''),
+      mapCurrent: onMapTab ? 'page' : undefined,
+      searchCurrent: s.screen === 'search' ? 'page' : undefined,
+      settingsCurrent: s.screen === 'settings' ? 'page' : undefined,
+      mapNavColor: navColor(onMapTab),
+      searchNavColor: navColor(s.screen === 'search'),
+      settingsNavColor: navColor(s.screen === 'settings'),
+
+      toast: s.toast, hasToast: !!s.toast,
+
+      sheetOpen: sheetOpen,
+      sheetTitle: s.picker ? 'Choose a place' : (s.sheet === 'space' ? 'Add a section' : 'Add item'),
+      closeSheet: () => { if (this.state.picker) this.setState({ picker: null }); else this.setState({ sheet: null }); },
+      showAdd: s.sheet === 'add' && !s.picker,
+      showSpaceForm: s.sheet === 'space' && !s.picker,
+      showPicker: !!s.picker,
+
+      addName: s.addName,
+      onAddName: e => this.setState({ addName: e.target.value }),
+      onAddKey: e => { if (e.key === 'Enter') { e.preventDefault(); save(true)(); } },
+      suggestions: suggestions, hasSuggestions: suggestions.length > 0,
+      addPath: pathText(s.addSpace),
+      addRoomColor: roomColor(s.addSpace),
+      openPickerAdd: set({ picker: 'add' }),
+      addQty: s.addQty,
+      incAdd: () => this.setState({ addQty: this.state.addQty + 1 }),
+      decAdd: () => this.setState({ addQty: Math.max(1, this.state.addQty - 1) }),
+      cannotSave: !s.addName.trim(),
+      saveOnce: save(false),
+      saveMore: save(true),
+      elapsedText: elapsed.toFixed(1) + ' s',
+      timerLabel: 'Time on this item: ' + elapsed.toFixed(0) + ' seconds',
+      timerStyle: elapsed <= 10 ? 'background: #E6F2F1; color: #0B524C;' : 'background: #FEF3C7; color: #92400E;',
+
+      newSpace: s.newSpace,
+      onNewSpace: e => this.setState({ newSpace: e.target.value }),
+      onNewSpaceKey: e => { if (e.key === 'Enter') { e.preventDefault(); saveSpace(); } },
+      cannotSaveSpace: !s.newSpace.trim(),
+      saveSpace: saveSpace,
+
+      pickerTitle: s.picker === 'move' ? 'Move to…' : 'Where is it?',
+      closePicker: set({ picker: null }),
+      pickerGroups: pickerGroups
+    };
+  }
+}
+</script>
+</body>
+</html>
