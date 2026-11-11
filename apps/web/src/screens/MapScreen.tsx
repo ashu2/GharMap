@@ -1,7 +1,7 @@
-import type { HomeTree, Space } from '@gharmap/core';
-import { Link, useNavigate } from 'react-router-dom';
-import { CloseIcon, SearchIcon } from '../components/Icons';
-import { useStore } from '../store';
+import { ROOT_ID, type HomeTree, type Space } from '@gharmap/core';
+import type { CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
+import { useFind, useStore } from '../store';
 import { useWide } from '../useWide';
 
 /** Splits rooms into n columns, each room going to the currently shortest one. */
@@ -9,105 +9,92 @@ function columns(tree: HomeTree, n: number): Space[][] {
   const cols: Space[][] = Array.from({ length: n }, () => []);
   const height: number[] = Array(n).fill(0);
   for (const room of tree.rooms) {
-    const units = tree.kids(room.id);
-    const weight = 1 + units.length + units.reduce((sum, u) => sum + tree.kids(u.id).length * 0.6, 0);
     const c = height.indexOf(Math.min(...height));
     cols[c]!.push(room);
-    height[c]! += weight;
+    height[c]! += 1 + tree.kids(room.id).length;
   }
   return cols;
 }
 
-function RoomCard({ room, lit, hlName }: { room: Space; lit: Set<string>; hlName: string }) {
+function RoomCard({ room, lit, found }: { room: Space; lit: Set<string>; found: boolean }) {
   const { tree } = useStore();
-  const color = room.color ?? '#94A3B8';
+  const here = lit.has(room.id);
   return (
-    <section
+    <Link
+      to={`/space/${room.id}`}
       aria-label={room.name}
       className="room-card"
-      style={{ background: color + '24', border: lit.has(room.id) ? undefined : `1px solid ${color}73` }}
-      data-lit={lit.has(room.id) || undefined}
+      style={{ '--room': room.color ?? '#94A3B8' } as CSSProperties}
+      data-lit={here || undefined}
+      data-dim={(found && !here) || undefined}
     >
-      <Link to={`/space/${room.id}`} className="room-head">
+      <span className="room-head">
         <span className="room-title">
-          <span aria-hidden="true" className="swatch" style={{ background: color }} />
+          <span aria-hidden="true" className="swatch swatch-room" />
           <span className="ellipsis">{room.name}</span>
         </span>
-        <span className="room-count">{tree.deep(room.id)}</span>
-      </Link>
-      {tree.kids(room.id).map(u => (
-        <Link key={u.id} to={`/space/${u.id}`} className="unit" data-lit={lit.has(u.id) || undefined}>
-          <span className="unit-head">
-            <span className="ellipsis">{u.name}</span>
-            <span className="muted-count">{tree.deep(u.id)}</span>
-          </span>
-          {tree.kids(u.id).map(c => (
-            <span key={c.id} className="comp ellipsis" data-lit={lit.has(c.id) || undefined}>
-              {lit.has(c.id) ? `${c.name} · ${hlName}` : c.name}
+        <span className="room-count">{here ? 'Here' : tree.deep(room.id)}</span>
+      </span>
+      {tree.kids(room.id).length > 0 && (
+        <span className="room-units">
+          {tree.kids(room.id).map(u => (
+            <span key={u.id} className="unit" data-lit={lit.has(u.id) || undefined}>
+              <span className="unit-head">
+                <span className="ellipsis">{u.name}</span>
+                <span className="muted-count">{tree.deep(u.id)}</span>
+              </span>
+              {tree.kids(u.id).length > 0 && (
+                <span className="unit-sub ellipsis">
+                  {tree.kids(u.id).map(c => c.name).join(' · ')}
+                </span>
+              )}
             </span>
           ))}
-        </Link>
-      ))}
-    </section>
+        </span>
+      )}
+    </Link>
   );
 }
 
+/** Home: the whole flat as a map. Finding something lights its room up in place; the map never navigates away. */
 export function MapScreen() {
-  const { data, tree, hl, setHl } = useStore();
-  const navigate = useNavigate();
-  const hlItem = hl ? data.items.find(i => i.id === hl) : undefined;
-  const lit = new Set(hlItem ? tree.pathOf(hlItem.space).map(s => s.id) : []);
+  const { items, tree, openSpaceForm } = useStore();
+  const { ans, lit } = useFind();
   const cols = columns(tree, useWide() ? 3 : 2);
 
   return (
     <>
-      <header className="header">
-        <div className="title-block">
-          <span className="eyebrow">GharMap</span>
-          <h1 className="h1">{tree.root?.name ?? 'My home'}</h1>
-          <span className="sub">
-            {data.items.length} items in {tree.rooms.length} rooms
-          </span>
-        </div>
-        <Link to="/search" className="search-launch">
-          <SearchIcon />
-          <span>Find anything in your home…</span>
-        </Link>
+      <header className="header header-gap-2">
+        <span className="eyebrow">GharMap</span>
+        <h1 className="h1 ellipsis">{tree.root?.name ?? 'My home'}</h1>
+        <span className="sub">
+          {items.length} {items.length === 1 ? 'thing' : 'things'} · {tree.rooms.length}{' '}
+          {tree.rooms.length === 1 ? 'room' : 'rooms'}
+        </span>
       </header>
       <main className="main">
         <div className="stack-12">
-          {hlItem && (
-            <div role="status" className="found-card">
-              <div className="found-top">
-                <div className="found-text">
-                  <span className="found-eyebrow">Found</span>
-                  <span className="found-name">{hlItem.name}</span>
-                  <span className="found-path">{tree.pathText(hlItem.space)}</span>
+          {tree.rooms.length > 0 ? (
+            <div className="map-cols" data-found={ans ? '' : undefined}>
+              {cols.map((col, n) => (
+                <div key={n} className="map-col">
+                  {col.map(r => (
+                    <RoomCard key={r.id} room={r} lit={lit} found={!!ans} />
+                  ))}
                 </div>
-                <button type="button" aria-label="Clear highlight" className="icon-btn found-close" onClick={() => setHl(null)}>
-                  <CloseIcon />
-                </button>
-              </div>
-              <div className="row-8">
-                <button type="button" className="btn found-primary" onClick={() => navigate(`/space/${hlItem.space}`)}>
-                  Open that shelf
-                </button>
-                <button type="button" className="btn found-secondary" onClick={() => navigate(`/item/${hlItem.id}`)}>
-                  Item details
-                </button>
-              </div>
+              ))}
             </div>
+          ) : (
+            <div className="empty">This home has no rooms yet. Add the first one to start the map.</div>
           )}
-          <div className="map-cols">
-            {cols.map((col, n) => (
-              <div key={n} className="map-col">
-                {col.map(r => (
-                  <RoomCard key={r.id} room={r} lit={lit} hlName={hlItem?.name ?? ''} />
-                ))}
-              </div>
-            ))}
-          </div>
-          <p className="hint">Tap a room or a cupboard to zoom in</p>
+          {!ans && (
+            <p className="hint">
+              {tree.rooms.length > 0 && 'Tap a room to step inside · '}
+              <button type="button" className="link-btn" onClick={() => openSpaceForm(ROOT_ID)}>
+                Add a room
+              </button>
+            </p>
+          )}
         </div>
       </main>
     </>

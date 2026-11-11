@@ -5,14 +5,15 @@ GharMap is a personal side project: a home/family inventory app built around a s
 ## Code (Phase 0: browser-only web UI)
 - npm workspaces monorepo. `packages/core` = plain TS logic (no UI, no DOM rendering) reused by the Phase 1 Expo app; `apps/web` = React 18 + Vite 5 + React Router.
 - Commands: `npm run dev`, `npm test` (Vitest, core only), `npm run e2e` (Playwright, mobile + desktop projects, uses installed Chrome on port 5174), `npm run typecheck`, `npm run build`.
-- Responsive: one component tree; phone = bottom tab bar, ≥900 px = sidebar + 3-column map + centred dialogs. Breakpoint lives in both `useWide.ts` and the `@media` block at the end of `styles.css`.
+- Find-first UI: the map and the find bar share the home screen and the answer appears in place (`components/Dock.tsx`); things are added by filling a shelf (`/fill/:id`), not one at a time.
+- Responsive: one component tree; phone = find dock at the bottom + nav icons top right, ≥900 px = find rail on the left + 3-column map + centred dialogs. Breakpoint lives in both `useWide.ts` and the `@media` block at the end of `styles.css`.
 - Any UI change should keep `npm run e2e` green for both projects.
 - All data edits go through pure functions in `packages/core/src/ops.ts`; the web store (`apps/web/src/store.tsx`) only holds state and persists it.
 - Persistence is `localStorage` for now; `load`/`save` in `store.tsx` are the seam for the planned SQLite WASM (OPFS) worker.
 - Client-generated UUIDs (`newId`, with a fallback for non-secure contexts like a phone hitting the LAN dev server).
 - `design/phase0-mockup/` is the original Claude Design canvas mockup — reference only, not built.
 - Planning docs live in `docs/` (build plan, risk notes, source chats).
-- The repo sits in Google Drive: keep `node_modules/` and `dist/` out of anything that must sync.
+- The working copy lives at `/Users/ashutosh/Everything/projects/GharMap` (local disk, backed up with git). The old Google Drive copy under `My Drive/Work/GharMap` is stale — don't edit or run it there (Drive sync made Vite hang and filled the disk).
 
 ## Architecture decisions so far
 - Local-first: SQLite on each device, Postgres on the server.

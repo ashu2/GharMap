@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { toast } from './helpers';
+import { fillInput, toast } from './helpers';
 
 const dataLine = (page: Page) => page.locator('.para').first();
 
@@ -18,7 +18,7 @@ test('entry speed shows the median against the 10 s target', async ({ page }) =>
   await expect(page.locator('.big-num')).toHaveText('7.1 s');
   await expect(page.locator('.pill')).toHaveText('On target');
   await expect(page.locator('.bar')).toHaveCount(10);
-  await expect(page.locator('.bar[style*="rgb(217, 119, 6)"]')).toHaveCount(2); // 11.0 s and 12.1 s
+  await expect(page.locator('.bar[data-slow]')).toHaveCount(2); // 11.0 s and 12.1 s
 });
 
 test('export downloads a valid backup', async ({ page }) => {
@@ -52,11 +52,10 @@ test('reset asks first, and restores the demo home', async ({ page }) => {
 
 test('import restores a backup and rejects bad files', async ({ page }) => {
   // Make a change, back it up, then wipe it with a reset.
-  await page.goto('/space/bd-1');
-  await page.getByRole('button', { name: 'Add item here' }).click();
-  await page.keyboard.type('Spare keys');
+  await page.goto('/fill/bd-1');
+  await fillInput(page).fill('Spare keys');
   await page.keyboard.press('Enter');
-  await page.keyboard.press('Escape');
+  await expect(page.locator('.fill-row[data-new]')).toHaveCount(1);
 
   await page.goto('/settings');
   await expect(dataLine(page)).toContainText('66 items');

@@ -3,5 +3,7 @@ export * from './seed';
 export * from './tree';
 export * from './search';
 export * from './ops';
+export * from './assets';
 export * from './backup';
 export * from './stats';
+export * from './quickadd';

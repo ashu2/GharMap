@@ -50,6 +50,12 @@ export const PlusIcon = (p: IconProps) => (
     <path d="M12 5v14M5 12h14" />
   </Svg>
 );
+export const CameraIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </Svg>
+);
 export const MinusIcon = (p: IconProps) => (
   <Svg strokeWidth={2.5} {...p}>
     <path d="M5 12h14" />
@@ -85,5 +91,31 @@ export const SlidersIcon = (p: IconProps) => (
     <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
     <circle cx="16" cy="7" r="2" />
     <circle cx="10" cy="17" r="2" />
+  </Svg>
+);
+export const CarIcon = (p: IconProps) => (
+  <Svg size={22} {...p}>
+    <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11" />
+    <rect x="3" y="11" width="18" height="6" rx="2" />
+    <path d="M6 17v2M18 17v2M7.5 14h.01M16.5 14h.01" />
+  </Svg>
+);
+export const BikeIcon = (p: IconProps) => (
+  <Svg size={22} {...p}>
+    <circle cx="5.5" cy="16" r="3.5" />
+    <circle cx="18.5" cy="16" r="3.5" />
+    <path d="M5.5 16l4-7h5l4 7M9.5 9L8.5 6.5H6.5M14.5 9l1-2.5h2" />
+  </Svg>
+);
+export const TvIcon = (p: IconProps) => (
+  <Svg size={22} {...p}>
+    <rect x="3" y="5" width="18" height="12" rx="2" />
+    <path d="M8 21h8M12 17v4" />
+  </Svg>
+);
+export const BoxIcon = (p: IconProps) => (
+  <Svg size={22} {...p}>
+    <path d="M3 8l9-5 9 5v8l-9 5-9-5z" />
+    <path d="M3 8l9 5 9-5M12 13v8" />
   </Svg>
 );

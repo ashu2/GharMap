@@ -1,5 +1,6 @@
+import { isAssetKind, parseIsoDate } from './assets';
 import { ROOT_ID } from './tree';
-import type { HomeData, Item, Space } from './types';
+import type { Asset, HomeData, Item, Space } from './types';
 
 export const BACKUP_VERSION = 1;
 
@@ -35,7 +36,25 @@ function readItem(v: unknown, n: number): Item {
     qty: v.qty,
     unit: isStr(v.unit) ? v.unit : '',
     notes: isStr(v.notes) ? v.notes : '',
+    ...(isStr(v.photo) && v.photo.startsWith('data:image/') ? { photo: v.photo } : {}),
     history: Array.isArray(v.history) ? v.history.filter(isStr) : [],
+    ...(isStr(v.deletedAt) ? { deletedAt: v.deletedAt } : {}),
+  };
+}
+
+const readDate = (v: unknown): string => (isStr(v) && parseIsoDate(v) ? v : '');
+
+function readAsset(v: unknown, n: number): Asset {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.name)) throw new Error(`Asset #${n + 1} is malformed`);
+  return {
+    id: v.id,
+    name: v.name,
+    kind: isAssetKind(v.kind) ? v.kind : 'other',
+    bought: readDate(v.bought),
+    insuranceDue: readDate(v.insuranceDue),
+    serviceDue: readDate(v.serviceDue),
+    notes: isStr(v.notes) ? v.notes : '',
+    ...(isStr(v.deletedAt) ? { deletedAt: v.deletedAt } : {}),
   };
 }
 
@@ -58,6 +77,8 @@ export function parseBackup(text: string): HomeData {
 
   const spaces = d.spaces.map(readSpace);
   const items = d.items.map(readItem);
+  // Backups made before assets existed have no such list.
+  const assets = Array.isArray(d.assets) ? d.assets.map(readAsset) : [];
   const times = Array.isArray(d.times) ? d.times.filter((t): t is number => typeof t === 'number') : [];
 
   const ids = new Set(spaces.map(s => s.id));
@@ -65,5 +86,5 @@ export function parseBackup(text: string): HomeData {
   const orphan = items.find(i => !ids.has(i.space));
   if (orphan) throw new Error(`"${orphan.name}" points to a place that does not exist`);
 
-  return { spaces, items, times };
+  return { spaces, items, assets, times };
 }

@@ -1,12 +1,15 @@
-import { TARGET_SECS, median, parseBackup, seedData, toBackup } from '@gharmap/core';
+import { ROOT_ID, TARGET_SECS, liveItems, median, parseBackup, removedItems, restoreItem, seedData, toBackup } from '@gharmap/core';
 import { useRef } from 'react';
-import { ACCENT, useStore } from '../store';
+import { Link } from 'react-router-dom';
+import { NameField } from '../components/Chrome';
+import { useStore } from '../store';
 
 const BAR_MAX_SECS = 20;
 const BAR_HEIGHT = 72;
 
 export function SettingsScreen() {
-  const { data, replace, showToast, setHl } = useStore();
+  const { data, items, tree, update, replace, showToast, clearFind } = useStore();
+  const removed = removedItems(data.items);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const med = median(data.times);
@@ -28,8 +31,8 @@ export function SettingsScreen() {
   const importFile = async (file: File) => {
     try {
       const next = parseBackup(await file.text());
-      if (!window.confirm(`Replace everything with this backup (${next.items.length} items)?`)) return;
-      setHl(null);
+      if (!window.confirm(`Replace everything with this backup (${liveItems(next.items).length} items)?`)) return;
+      clearFind();
       replace(next);
       showToast('Backup restored');
     } catch (e) {
@@ -39,7 +42,7 @@ export function SettingsScreen() {
 
   const reset = () => {
     if (!window.confirm('Replace everything with the demo home? Export a backup first if you want to keep your items.')) return;
-    setHl(null);
+    clearFind();
     replace(seedData());
     showToast('Demo data restored');
   };
@@ -71,21 +74,20 @@ export function SettingsScreen() {
                 <span
                   key={n}
                   className="bar"
-                  style={{
-                    height: Math.max(4, Math.round((Math.min(t, BAR_MAX_SECS) / BAR_MAX_SECS) * BAR_HEIGHT)),
-                    background: t <= TARGET_SECS ? ACCENT : '#D97706',
-                  }}
+                  data-slow={t > TARGET_SECS || undefined}
+                  style={{ height: Math.max(4, Math.round((Math.min(t, BAR_MAX_SECS) / BAR_MAX_SECS) * BAR_HEIGHT)) }}
                 />
               ))}
             </div>
             <span className="fine">
-              Last {recent.length} items added, oldest first. Dashed line is {TARGET_SECS} s; amber bars took longer.
+              Last {recent.length} things added, oldest first. Dashed line is {TARGET_SECS} s; outlined bars took longer.
             </span>
           </section>
           <section className="card card-16 stack-10">
-            <h2 className="h2">Your data</h2>
+            <h2 className="h2">Your home</h2>
+            <NameField id={ROOT_ID} label="Home name" />
             <p className="para">
-              {data.items.length} items in {data.spaces.length - 1} places. Stored only in this browser; nothing is sent
+              {items.length} items in {data.spaces.length - 1} places. Stored only in this browser; nothing is sent
               anywhere.
             </p>
             <button type="button" className="btn btn-primary btn-46" onClick={exportData}>
@@ -105,10 +107,39 @@ export function SettingsScreen() {
                 if (f) void importFile(f);
               }}
             />
+            <Link to="/welcome" className="btn btn-outline btn-46">
+              Start a new, empty home
+            </Link>
             <button type="button" className="btn btn-danger btn-46" onClick={reset}>
               Reset to demo data
             </button>
           </section>
+          {removed.length > 0 && (
+            <section className="card card-16 stack-10" aria-label="Recently removed">
+              <h2 className="h2">Recently removed</h2>
+              <ul className="list">
+                {removed.map(i => (
+                  <li key={i.id} className="starter-row removed-row">
+                    <span className="result-text">
+                      <span className="result-name">{i.name}</span>
+                      <span className="result-path">Was in {tree.pathText(i.space) || 'a place that no longer exists'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Restore ${i.name}`}
+                      className="btn btn-outline btn-44 btn-pad"
+                      onClick={() => {
+                        update(d => restoreItem(d, i.id));
+                        showToast(`Restored ${i.name}`);
+                      }}
+                    >
+                      Restore
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <section className="card card-16 stack-6">
             <h2 className="h2">About this build</h2>
             <p className="para">

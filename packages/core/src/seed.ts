@@ -1,4 +1,5 @@
-import type { HomeData, Item, Space } from './types';
+import { isoDate } from './assets';
+import type { Asset, HomeData, Item, Space } from './types';
 
 /** Demo home, ported from the original React prototype's `homeData` (Gurgaon flat). */
 const SPACES: Space[] = [
@@ -76,13 +77,35 @@ const NOTES: Record<string, string> = {
   'Documents Folder': 'Flat registry, car RC, insurance papers.',
 };
 
+/** Demo assets. Due dates are relative to today so the list always shows one soon and one overdue. */
+function seedAssets(now: Date): Asset[] {
+  const inDays = (n: number) => isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + n));
+  const rows: [string, Asset['kind'], string, string, string, string][] = [
+    ['Double-door fridge', 'appliance', '2017-06-20', '', '', ''],
+    ['Family car', 'car', '2019-03-15', inDays(20), inDays(120), 'RC and insurance are in the Documents Folder.'],
+    ['Washing machine', 'appliance', '2020-01-10', '', '', ''],
+    ['Scooter', 'bike', '2021-10-05', inDays(200), inDays(-10), ''],
+    ['Smart TV 55 inch', 'electronics', '2022-11-01', '', '', ''],
+    ['Sofa set', 'furniture', '', '', '', 'Came with the flat; purchase date not known.'],
+  ];
+  return rows.map(([name, kind, bought, insuranceDue, serviceDue, notes], n) => ({
+    id: 'a' + n,
+    name,
+    kind,
+    bought,
+    insuranceDue,
+    serviceDue,
+    notes,
+  }));
+}
+
 /** Sample entry times so the Settings chart has something to show on first run. */
 const DEMO_TIMES = [7.4, 12.1, 6.0, 9.2, 5.1, 8.3, 4.6, 6.8, 11.0, 5.7];
 
 /** Space new items default to when nothing else is selected. */
 export const DEFAULT_ADD_SPACE = 'wa-right';
 
-export function seedData(): HomeData {
+export function seedData(now = new Date()): HomeData {
   const items: Item[] = ITEM_ROWS.map(([space, name, qty, unit], n) => ({
     id: 'i' + n,
     space,
@@ -92,5 +115,5 @@ export function seedData(): HomeData {
     notes: NOTES[name] ?? '',
     history: ['Added from the prototype data'],
   }));
-  return { spaces: SPACES.map(s => ({ ...s })), items, times: [...DEMO_TIMES] };
+  return { spaces: SPACES.map(s => ({ ...s })), items, assets: seedAssets(now), times: [...DEMO_TIMES] };
 }

@@ -1,41 +1,52 @@
-import { updateItem } from '@gharmap/core';
-import { useNavigate, useParams } from 'react-router-dom';
-import { CrumbBar } from '../components/Chrome';
-import { MinusIcon, PinIcon, PlusIcon } from '../components/Icons';
+import { removeItem, updateItem } from '@gharmap/core';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { PathSteps } from '../components/Chrome';
+import { BackIcon, MinusIcon, PinIcon, PlusIcon } from '../components/Icons';
 import { useStore } from '../store';
 import { NotFound } from './NotFound';
 
 export function ItemScreen() {
   const { id = '' } = useParams();
-  const { data, tree, update, setHl, openPicker } = useStore();
+  const { items, tree, update, setQuery, setPick, clearFind, openPicker, showToast } = useStore();
   const navigate = useNavigate();
-  const it = data.items.find(i => i.id === id);
+  const it = items.find(i => i.id === id);
   if (!it) return <NotFound what="item" />;
 
-  const crumbs = [{ name: tree.root?.name ?? 'Home', to: '/' }].concat(
-    tree.pathOf(it.space).map(s => ({ name: s.name, to: `/space/${s.id}` })),
-  );
+  const path = tree.pathOf(it.space);
+  const room = path[0];
   const setQty = (qty: number) => update(d => updateItem(d, it.id, { qty: Math.max(0, qty) }));
+  const remove = () => {
+    if (!window.confirm(`Remove ${it.name} from this home? You can bring it back from Settings.`)) return;
+    clearFind();
+    update(d => removeItem(d, it.id));
+    showToast(`Removed ${it.name}`);
+    navigate(room ? `/space/${room.id}` : '/');
+  };
 
   return (
     <>
-      <header className="header header-tight">
-        <CrumbBar back={`/space/${it.space}`} crumbs={crumbs} />
-        <h1 className="h1 h1-sm">{it.name}</h1>
+      <header className="header header-row">
+        <Link to={room ? `/space/${room.id}` : '/'} aria-label="Back" className="icon-btn boxed">
+          <BackIcon />
+        </Link>
+        <div className="title-block">
+          <span className="sub ellipsis">{path.slice(0, -1).map(s => s.name).join(' › ') || tree.root?.name}</span>
+          <h1 className="h1 h1-sm ellipsis">{it.name}</h1>
+        </div>
       </header>
       <main className="main">
         <div className="stack-12 narrow">
+          {it.photo && <img src={it.photo} alt={`Photo of ${it.name}`} className="item-photo" />}
           <section className="card stack-12">
-            <div className="stack-4">
-              <span className="label">Location</span>
-              <span className="location">{tree.pathText(it.space)}</span>
-            </div>
+            <span className="label">Where it is</span>
+            <PathSteps path={path} />
             <div className="row-8">
               <button
                 type="button"
                 className="btn btn-primary btn-44 grow"
                 onClick={() => {
-                  setHl(it.id);
+                  setQuery('');
+                  setPick(it.id);
                   navigate('/');
                 }}
               >
@@ -90,6 +101,9 @@ export function ItemScreen() {
               ))}
             </ul>
           </section>
+          <button type="button" className="btn btn-danger btn-46" onClick={remove}>
+            Remove from this home
+          </button>
         </div>
       </main>
     </>

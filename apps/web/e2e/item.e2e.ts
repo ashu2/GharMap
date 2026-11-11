@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { h1, pickPlace, toast } from './helpers';
+import { answer, cupboard, findBox, h1, pickPlace, thing, toast } from './helpers';
 
 test('quantity stops at zero and notes persist', async ({ page }) => {
   await page.goto('/item/i0');
@@ -22,40 +22,84 @@ test('quantity stops at zero and notes persist', async ({ page }) => {
   await expect(notes).toHaveValue('Amul toned, back of shelf');
 
   // Notes are searchable.
-  await page.goto('/search');
-  await page.getByRole('searchbox').fill('amul');
-  await expect(page.locator('.result-name')).toHaveText(['Milk']);
+  await page.goto('/');
+  await findBox(page).fill('amul');
+  await expect(answer(page).locator('.answer-name')).toHaveText('Milk');
 });
 
-test('moving an item updates its place, history and map highlight', async ({ page }) => {
+test('moving a thing updates its place and history', async ({ page }) => {
   await page.goto('/item/i42');
   await expect(h1(page)).toHaveText('Passports');
   await expect(page.locator('.history li')).toHaveCount(1);
+  await expect(page.locator('.step[data-last]')).toContainText('Right Side');
 
-  await page.getByRole('button', { name: 'Move' }).click();
-  await expect(page.getByRole('heading', { name: 'Move to…' })).toBeVisible();
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Move Passports' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Wooden Almirah › Right Side', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await pickPlace(page, 'Bed Drawer › Left Drawer');
 
   await expect(toast(page)).toContainText('Moved to Master Bedroom › Bed Drawer › Left Drawer');
-  await expect(page.locator('.location')).toHaveText('Master Bedroom › Bed Drawer › Left Drawer');
+  await expect(page.locator('.step[data-last]')).toContainText('Left Drawer');
   await expect(page.locator('.history li').first()).toHaveText(
     'Moved from Master Bedroom › Wooden Almirah › Right Side',
   );
-  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Bed Drawer');
-
-  await page.getByRole('button', { name: 'Show on map' }).click();
-  await expect(page).toHaveURL('/');
-  await expect(page.locator('.comp[data-lit]')).toHaveText('Left Drawer · Passports');
 
   await page.reload();
-  await page.goto('/space/wa-right');
-  await expect(page.getByText('2 items inside')).toBeVisible();
+  await page.goto('/space/master');
+  await expect(cupboard(page, 'Wooden Almirah')).toContainText('8 things');
+  await expect(cupboard(page, 'Bed Drawer')).toContainText('Passports');
 });
 
-test('moving to the same place changes nothing', async ({ page }) => {
+test('moving to the same place changes nothing; Escape closes the picker', async ({ page }) => {
   await page.goto('/item/i42');
-  await page.getByRole('button', { name: 'Move' }).click();
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
   await pickPlace(page, 'Wooden Almirah › Right Side');
   await expect(page.locator('.history li')).toHaveCount(1);
   await expect(toast(page)).toBeHidden();
+
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
+});
+
+test('removing a thing asks first, hides it everywhere, and it can be restored', async ({ page }) => {
+  await page.goto('/item/i42');
+  page.once('dialog', d => d.dismiss());
+  await page.getByRole('button', { name: 'Remove from this home' }).click();
+  await expect(h1(page)).toHaveText('Passports');
+
+  page.once('dialog', d => {
+    expect(d.message()).toContain('Remove Passports');
+    void d.accept();
+  });
+  await page.getByRole('button', { name: 'Remove from this home' }).click();
+  await expect(toast(page)).toHaveText('Removed Passports');
+  await expect(page).toHaveURL('/space/master');
+  await expect(thing(page, 'Passports')).toHaveCount(0);
+  await expect(cupboard(page, 'Wooden Almirah')).toContainText('8 things');
+
+  // Gone from the count, from search, and its old link; still gone after a reload.
+  await page.reload();
+  await page.goto('/');
+  await expect(page.getByText('64 things · 6 rooms')).toBeVisible();
+  await findBox(page).fill('passport');
+  await expect(page.getByText('Nothing called “passport” yet')).toBeVisible();
+  await page.goto('/item/i42');
+  await expect(page.getByText('This item no longer exists')).toBeVisible();
+
+  // Settings lists it with where it was, and puts it back on the same shelf.
+  await page.goto('/settings');
+  const removed = page.getByRole('region', { name: 'Recently removed' });
+  await expect(removed).toContainText('Was in Master Bedroom › Wooden Almirah › Right Side');
+  await expect(page.getByText('64 items in')).toBeVisible();
+  await removed.getByRole('button', { name: 'Restore Passports' }).click();
+  await expect(toast(page)).toHaveText('Restored Passports');
+  await expect(removed).toBeHidden();
+
+  await page.goto('/space/master');
+  await expect(cupboard(page, 'Wooden Almirah').locator('.shelf', { hasText: 'Right Side' })).toContainText('Passports');
+  await thing(page, 'Passports').click();
+  await expect(page.locator('.history li')).toHaveText(['Restored', 'Removed', 'Added from the prototype data']);
 });

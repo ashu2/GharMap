@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npm run dev -w @gharmap/web",
     "build": "npm run build -w @gharmap/web",
+    "build:pages": "npm run build:pages -w @gharmap/web",
     "preview": "npm run preview -w @gharmap/web",
     "test": "vitest run",
     "typecheck": "tsc -p packages/core && tsc -p apps/web && tsc -p apps/web/e2e",

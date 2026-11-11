@@ -1,11 +1,13 @@
 import {
-  DEFAULT_ADD_SPACE,
   buildTree,
+  liveItems,
   parseBackup,
+  searchItems,
   seedData,
   toBackup,
   type HomeData,
   type HomeTree,
+  type Item,
 } from '@gharmap/core';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StoreContext as Ctx } from './storeContext';
@@ -34,34 +36,49 @@ function save(data: HomeData) {
   }
 }
 
-type Sheet = { kind: 'add' } | { kind: 'space'; parent: string } | null;
-type Picker = { mode: 'add' } | { mode: 'move'; itemId: string } | null;
+type Sheet = { kind: 'space'; parent: string } | { kind: 'article' } | { kind: 'asset'; id?: string } | null;
+type Picker =
+  | { mode: 'move'; itemId: string }
+  /** Adds a new thing called `name` at the place picked; `show` then opens its answer card. */
+  | { mode: 'place'; name: string; show: boolean; start: number; photo?: string }
+  | null;
 
 export interface Store {
+  /** Everything stored, including removed rows. Screens read `items` instead. */
   data: HomeData;
+  /** The things that have not been removed. */
+  items: Item[];
   tree: HomeTree;
   update(fn: (d: HomeData) => HomeData): void;
   replace(d: HomeData): void;
 
-  /** Item whose path is lit up on the map. */
-  hl: string | null;
-  setHl(id: string | null): void;
+  /** What is typed in the find bar. */
   query: string;
   setQuery(q: string): void;
+  /** A thing chosen directly (another match, or "Show on map"); wins over the first match. */
+  pick: string | null;
+  setPick(id: string | null): void;
+  /** Clears the query and the pick, which closes the answer card. */
+  clearFind(): void;
   toast: string;
   showToast(msg: string): void;
 
   sheet: Sheet;
   picker: Picker;
-  openAdd(opts?: { name?: string; space?: string }): void;
   openSpaceForm(parent: string): void;
+  /** With an id, edits that asset; without, adds a new one. */
+  openAssetForm(id?: string): void;
+  /** The + button: name (and optionally photograph) a new thing, then pick where it goes. */
+  openArticleForm(): void;
+  /** Closes the picker and any sheet under it. */
+  closeAll(): void;
   openPicker(p: NonNullable<Picker>): void;
   closePicker(): void;
   closeSheet(): void;
 
-  /** Quick-add form state lives here so it survives opening the place picker. */
-  add: { name: string; qty: number; space: string; start: number };
-  setAdd(patch: Partial<Store['add']>): void;
+  /** Shelf last filled, so the + button on the home screen goes back to it. */
+  lastFill: string | null;
+  setLastFill(id: string): void;
 }
 
 export function useStore(): Store {
@@ -70,13 +87,26 @@ export function useStore(): Store {
   return s;
 }
 
+/** The find bar's result: every match, the one being shown, and the path that lights up on the map. */
+export function useFind() {
+  const { items, tree, query, pick } = useStore();
+  return useMemo(() => {
+    const q = query.trim();
+    const matches = searchItems(items, q);
+    const ans = (pick ? items.find(i => i.id === pick) : undefined) ?? matches[0];
+    const path = ans ? tree.pathOf(ans.space) : [];
+    return { q, matches, ans, path, lit: new Set(path.map(s => s.id)) };
+  }, [items, tree, query, pick]);
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<HomeData>(load);
-  const tree = useMemo(() => buildTree(data.spaces, data.items), [data.spaces, data.items]);
+  const items = useMemo(() => liveItems(data.items), [data.items]);
+  const tree = useMemo(() => buildTree(data.spaces, items), [data.spaces, items]);
   useEffect(() => save(data), [data]);
 
-  const [hl, setHl] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [pick, setPick] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const toastTimer = useRef<number>();
   const showToast = useCallback((msg: string) => {
@@ -88,39 +118,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const [sheet, setSheet] = useState<Sheet>(null);
   const [picker, setPicker] = useState<Picker>(null);
-  const [add, setAddState] = useState({ name: '', qty: 1, space: DEFAULT_ADD_SPACE, start: 0 });
-  const setAdd = useCallback((patch: Partial<Store['add']>) => setAddState(a => ({ ...a, ...patch })), []);
+  const [lastFill, setLastFill] = useState<string | null>(null);
 
   const store: Store = {
     data,
+    items,
     tree,
     update: fn => setData(fn),
     replace: setData,
-    hl,
-    setHl,
     query,
     setQuery,
+    pick,
+    setPick,
+    clearFind: () => {
+      setQuery('');
+      setPick(null);
+    },
     toast,
     showToast,
     sheet,
     picker,
-    openAdd: opts => {
-      // Prefer the place the user is looking at, then the last place used.
-      let space = opts?.space ?? add.space;
-      if (!tree.get(space)) space = tree.leavesUnder('home')[0]?.id ?? 'home';
-      setAddState({ name: opts?.name ?? '', qty: 1, space, start: Date.now() });
-      setPicker(null);
-      setSheet({ kind: 'add' });
-    },
     openSpaceForm: parent => {
       setPicker(null);
       setSheet({ kind: 'space', parent });
     },
+    openAssetForm: id => {
+      setPicker(null);
+      setSheet({ kind: 'asset', id });
+    },
+    openArticleForm: () => {
+      setPicker(null);
+      setSheet({ kind: 'article' });
+    },
+    closeAll: () => {
+      setPicker(null);
+      setSheet(null);
+    },
     openPicker: setPicker,
     closePicker: () => setPicker(null),
     closeSheet: () => (picker ? setPicker(null) : setSheet(null)),
-    add,
-    setAdd,
+    lastFill,
+    setLastFill,
   };
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

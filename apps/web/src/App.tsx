@@ -1,36 +1,45 @@
 import { Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { MainNav, Toast } from './components/Chrome';
+import { Dock } from './components/Dock';
 import { Sheets } from './components/Sheets';
+import { AssetsScreen } from './screens/AssetsScreen';
+import { EditScreen } from './screens/EditScreen';
+import { FillScreen } from './screens/FillScreen';
 import { ItemScreen } from './screens/ItemScreen';
 import { MapScreen } from './screens/MapScreen';
-import { SearchScreen } from './screens/SearchScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { StarterScreen, WelcomeScreen } from './screens/SetupScreens';
 import { SpaceScreen } from './screens/SpaceScreen';
-import { useStore } from './store';
+import { useWide } from './useWide';
+
+/** Routes with their own back button; the phone hides the main nav on these. */
+const DEEP = ['space', 'item', 'fill', 'edit', 'welcome', 'start'];
+/** Routes where the phone hides the find dock, so forms get the whole screen. */
+const NO_DOCK = ['item', 'fill', 'edit', 'welcome', 'start', 'assets', 'settings'];
 
 export function App() {
-  const { data, openAdd } = useStore();
-  const { pathname } = useLocation();
-
-  // The Add tab drops new items where the user is looking.
-  const onAdd = () => {
-    const [, kind, id] = pathname.split('/');
-    if (kind === 'space' && id) return openAdd({ space: id });
-    if (kind === 'item' && id) return openAdd({ space: data.items.find(i => i.id === id)?.space });
-    openAdd();
-  };
+  const wide = useWide();
+  const first = useLocation().pathname.split('/')[1] ?? '';
 
   return (
-    <div className="app">
-      <Routes>
-        <Route path="/" element={<MapScreen />} />
-        <Route path="/space/:id" element={<Keyed><SpaceScreen /></Keyed>} />
-        <Route path="/item/:id" element={<Keyed><ItemScreen /></Keyed>} />
-        <Route path="/search" element={<SearchScreen />} />
-        <Route path="/settings" element={<SettingsScreen />} />
-        <Route path="*" element={<MapScreen />} />
-      </Routes>
-      <MainNav onAdd={onAdd} />
+    <div className="app" data-top={DEEP.includes(first) ? undefined : ''}>
+      <div className="stage">
+        <Routes>
+          <Route path="/" element={<MapScreen />} />
+          <Route path="/space/:id" element={<Keyed><SpaceScreen /></Keyed>} />
+          <Route path="/item/:id" element={<Keyed><ItemScreen /></Keyed>} />
+          <Route path="/fill/:id" element={<Keyed><FillScreen /></Keyed>} />
+          <Route path="/edit/:id" element={<Keyed><EditScreen /></Keyed>} />
+          <Route path="/assets" element={<AssetsScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
+          <Route path="/welcome" element={<WelcomeScreen />} />
+          <Route path="/start" element={<StarterScreen />} />
+          <Route path="*" element={<MapScreen />} />
+        </Routes>
+      </div>
+      {/* Phone: the find dock sits under the map and rooms. Desktop: it is the left rail on every screen. */}
+      {(wide || !NO_DOCK.includes(first)) && <Dock />}
+      <MainNav />
       <Toast />
       <Sheets />
     </div>
